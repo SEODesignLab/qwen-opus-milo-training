@@ -11,7 +11,7 @@ if torch.cuda.is_available():
     print(f"VRAM: {torch.cuda.get_device_properties(0).total_memory / 1e9:.1f} GB")
 
 # Model - the original (non-MLX) Opus-distilled Qwen
-MODEL_NAME = "ehristoforu/Qwen3.5-27B-Claude-4.6-Opus-Distilled"
+MODEL_NAME = "Jackrong/Qwen3.5-27B-Claude-4.6-Opus-Reasoning-Distilled"
 
 print(f"Loading model: {MODEL_NAME}")
 tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME, trust_remote_code=True)
