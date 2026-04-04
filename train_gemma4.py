@@ -11,24 +11,16 @@ if torch.cuda.is_available():
     vram = torch.cuda.get_device_properties(0).total_memory / 1e9
     print(f"VRAM: {vram:.1f} GB")
 
-MODEL_NAME = "google/gemma-4-27b-it"
+MODEL_NAME = "unsloth/gemma-3-27b-it-bnb-4bit"
 
 print(f"Loading tokenizer: {MODEL_NAME}")
 tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME, trust_remote_code=True)
 if tokenizer.pad_token is None:
     tokenizer.pad_token = tokenizer.eos_token
 
-print(f"Loading model in 4-bit: {MODEL_NAME}")
-bnb_config = BitsAndBytesConfig(
-    load_in_4bit=True,
-    bnb_4bit_quant_type="nf4",
-    bnb_4bit_compute_dtype=torch.float16,
-    bnb_4bit_use_double_quant=True,
-)
-
+print(f"Loading pre-quantized model: {MODEL_NAME}")
 model = AutoModelForCausalLM.from_pretrained(
     MODEL_NAME,
-    quantization_config=bnb_config,
     device_map="auto",
     trust_remote_code=True,
     torch_dtype=torch.float16,
@@ -76,7 +68,7 @@ print("Tokenizing dataset...")
 tokenized = dataset.map(tokenize, remove_columns=dataset["train"].column_names)
 
 training_args = TrainingArguments(
-    output_dir="./output-gemma4",
+    output_dir="./output-gemma3",
     num_train_epochs=3,
     per_device_train_batch_size=1,
     gradient_accumulation_steps=8,
@@ -104,10 +96,10 @@ trainer = Trainer(
     eval_dataset=tokenized["validation"],
 )
 
-print("Starting Gemma 4 training...")
+print("Starting Gemma 3 27B training...")
 trainer.train()
 
-model.save_pretrained("./output-gemma4/final-adapters")
-tokenizer.save_pretrained("./output-gemma4/final-adapters")
-print("GEMMA4_TRAINING_COMPLETE")
+model.save_pretrained("./output-gemma3/final-adapters")
+tokenizer.save_pretrained("./output-gemma3/final-adapters")
+print("GEMMA3_TRAINING_COMPLETE")
 print("ADAPTERS_SAVED=true")
