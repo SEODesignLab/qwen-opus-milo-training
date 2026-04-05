@@ -1,8 +1,10 @@
 import torch
+import os
+os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "expandable_segments:True"
 from transformers import AutoModelForCausalLM, AutoTokenizer, TrainingArguments, BitsAndBytesConfig
 from peft import LoraConfig, get_peft_model, prepare_model_for_kbit_training
 from datasets import load_dataset
-import gc, os
+import gc
 
 print(f"PyTorch version: {torch.__version__}")
 print(f"CUDA available: {torch.cuda.is_available()}")
@@ -42,14 +44,13 @@ model = AutoModelForCausalLM.from_pretrained(
 gc.collect()
 torch.cuda.empty_cache()
 
-model = prepare_model_for_kbit_training(model, use_gradient_checkpointing=True)
+model = prepare_model_for_kbit_training(model, use_gradient_checkpointing=False)
 
 lora_config = LoraConfig(
-    r=16,  # r=16 gives better quality; r=8 was too conservative for 24 GB RTX 4090
-    lora_alpha=32,
+    r=8,
+    lora_alpha=16,
     lora_dropout=0.05,
-    # Target all attention projections for better fidelity
-    target_modules=["q_proj", "k_proj", "v_proj", "o_proj"],
+    target_modules=["q_proj", "v_proj"],  # 2 modules instead of 4 to save VRAM
     bias="none",
     task_type="CAUSAL_LM",
 )
@@ -64,8 +65,8 @@ print(f"VRAM after model load: {torch.cuda.memory_allocated()/1e9:.1f} GB / {tor
 print("Loading dataset...")
 dataset = load_dataset("json", data_files={"train": "train.jsonl", "validation": "valid.jsonl"})
 
-# Avg example is ~700 tokens; max is ~950 tokens. seq_len=1024 covers all examples with no waste.
-MAX_SEQ_LEN = 1024
+# Reduced to 512 to fit in RTX 4090 24GB VRAM with 27B model
+MAX_SEQ_LEN = 512
 
 def tokenize(example):
     try:
