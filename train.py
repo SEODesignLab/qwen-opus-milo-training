@@ -12,9 +12,12 @@ if torch.cuda.is_available():
     print(f"VRAM: {vram:.1f} GB")
 
 MODEL_NAME = "Jackrong/Qwen3.5-27B-Claude-4.6-Opus-Reasoning-Distilled"
+# The Jackrong model has a broken tokenizer_config.json ("TokenizersBackend" doesn't exist).
+# Use the base Qwen tokenizer instead — it's the same vocab/tokenizer, just with correct metadata.
+TOKENIZER_NAME = "Qwen/Qwen2.5-32B-Instruct"
 
-print(f"Loading tokenizer: {MODEL_NAME}")
-tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME, trust_remote_code=True)
+print(f"Loading tokenizer: {TOKENIZER_NAME} (base Qwen tokenizer for compatibility)")
+tokenizer = AutoTokenizer.from_pretrained(TOKENIZER_NAME, trust_remote_code=True)
 if tokenizer.pad_token is None:
     tokenizer.pad_token = tokenizer.eos_token
 
