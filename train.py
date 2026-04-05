@@ -2,7 +2,7 @@ import torch
 import os
 os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "expandable_segments:True"
 from transformers import AutoModelForCausalLM, AutoTokenizer, TrainingArguments, BitsAndBytesConfig
-from peft import LoraConfig, get_peft_model, prepare_model_for_kbit_training
+from peft import LoraConfig, get_peft_model
 from datasets import load_dataset
 import gc
 
@@ -40,17 +40,20 @@ model = AutoModelForCausalLM.from_pretrained(
     low_cpu_mem_usage=True,
 )
 
-# Clear cache before prep
+# Skip prepare_model_for_kbit_training — it tries to cast all params to float32
+# which OOMs on 24GB with a 27B model. Instead, just enable gradient checkpointing
+# and apply LoRA directly. With peft>=0.18 this works correctly on quantized models.
 gc.collect()
 torch.cuda.empty_cache()
 
-model = prepare_model_for_kbit_training(model, use_gradient_checkpointing=False)
+model.gradient_checkpointing_enable(gradient_checkpointing_kwargs={"use_reentrant": False})
+model.enable_input_require_grads()
 
 lora_config = LoraConfig(
     r=8,
     lora_alpha=16,
     lora_dropout=0.05,
-    target_modules=["q_proj", "v_proj"],  # 2 modules instead of 4 to save VRAM
+    target_modules=["q_proj", "v_proj"],
     bias="none",
     task_type="CAUSAL_LM",
 )
