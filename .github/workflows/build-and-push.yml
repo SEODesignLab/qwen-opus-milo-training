@@ -3,11 +3,13 @@ name: Build and Push Training Image
 on:
   workflow_dispatch:
 
+permissions:
+  packages: write
+  contents: read
+
 jobs:
   build:
     runs-on: ubuntu-latest
-    permissions:
-      packages: write
     steps:
       - uses: actions/checkout@v4
       
